@@ -1,0 +1,1498 @@
+<title>FireDeck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --ground:#E4E7E9; --surface:#F5F7F8; --surface-2:#ECEFF1;
+  --ink:#15191B; --muted:#5B666C; --line:#C5CDD1; --line-soft:#D8DEE1;
+  --accent:#BE3018; --accent-soft:#F4DCD7; --amber:#8F5B06; --good:#2C6B4E; --cool:#2B5C7A;
+  /* Het paneel is een eigen wereldje: e-ink blijft papier, ook in donkere modus. */
+  --epd-paper:#D9D7D0; --epd-ink:#16160F; --epd-mid:#7C7B71; --epd-line:#A9A79D;
+  --s:1.45;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#121618; --surface:#1B2125; --surface-2:#222A2F;
+  --ink:#E7EDEF; --muted:#96A3AA; --line:#313B41; --line-soft:#283136;
+  --accent:#E2573A; --accent-soft:#3B1E18; --amber:#D19A3A; --good:#6BB394; --cool:#78B2D4;
+}}
+:root[data-theme="dark"]{
+  --ground:#121618; --surface:#1B2125; --surface-2:#222A2F;
+  --ink:#E7EDEF; --muted:#96A3AA; --line:#313B41; --line-soft:#283136;
+  --accent:#E2573A; --accent-soft:#3B1E18; --amber:#D19A3A; --good:#6BB394; --cool:#78B2D4;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:26px 56px}
+
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 24px;
+  border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:20px}
+h1{font-family:"Barlow Semi Condensed",system-ui,sans-serif;font-weight:700;
+  font-size:clamp(26px,5vw,38px);letter-spacing:-0.01em;text-transform:uppercase;margin:0;text-wrap:balance}
+.sub{color:var(--muted);max-width:60ch;margin:0;font-size:13.5px}
+.chip{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;border:1px solid var(--line);background:var(--surface);padding:3px 8px;white-space:nowrap}
+.chip.sim{border-color:var(--cool);color:var(--cool)}
+.chip.live{border-color:var(--good);color:var(--good)}
+
+.cols{display:grid;grid-template-columns:minmax(0,auto) minmax(300px,1fr);gap:30px;align-items:start}
+@media (max-width:1020px){ .cols{grid-template-columns:1fr} :root{--s:1.25} }
+@media (max-width:460px){ :root{--s:.95} }
+
+/* --------------------------------------------------------- toestel */
+/* De behuizing van de T-Deck Pro: licht, halftransparant, afgerond, met het
+   paneel in een witte lijst en het toetsenbord op een lichte plaat eronder. */
+.device{background:linear-gradient(#EDEFF0,#D9DDDF);border:1px solid #C3C8CB;border-radius:22px;
+  padding:16px 14px 10px;box-shadow:0 16px 38px rgba(0,0,0,.22),inset 0 1px 0 #fff;
+  width:max-content;max-width:100%;margin-inline:auto}
+.device .brand{display:flex;justify-content:space-between;align-items:center;
+  font-family:"IBM Plex Mono",monospace;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:#7D868B;margin-bottom:8px;padding:0 4px}
+.device .foot-brand{text-align:center;font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;
+  letter-spacing:.22em;font-size:11px;color:#9AA1A5;margin-top:8px}
+.screen-frame{background:#F4F5F6;padding:9px;border-radius:7px;border:1px solid #CBD0D3}
+.screen-scale{width:calc(240px * var(--s));height:calc(320px * var(--s));overflow:hidden}
+#screen{width:240px;height:320px;transform:scale(var(--s));transform-origin:top left;
+  background:var(--epd-paper);color:var(--epd-ink);
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;line-height:1.25;
+  display:flex;flex-direction:column;position:relative;cursor:default}
+#screen.flash{animation:epd .25s steps(2,end)}
+@keyframes epd{0%{filter:invert(1)}100%{filter:none}}
+@media (prefers-reduced-motion:reduce){#screen.flash{animation:none}}
+
+.epd-bar{display:flex;justify-content:space-between;gap:6px;padding:2px 6px;font-size:9px;
+  border-bottom:1px solid var(--epd-line);flex:none}
+.epd-title{padding:4px 7px 2px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+  display:flex;justify-content:space-between;align-items:baseline;gap:6px;flex:none}
+.epd-title .step{font-size:10px;font-weight:400;text-transform:none;color:var(--epd-mid)}
+.epd-crumb{padding:0 7px 3px;font-size:9px;color:var(--epd-mid);border-bottom:1px solid var(--epd-line);
+  min-height:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
+.epd-body{flex:1;overflow-y:auto;overflow-x:hidden;padding:2px 0;scrollbar-width:thin}
+.epd-body::-webkit-scrollbar{width:4px}
+.epd-body::-webkit-scrollbar-thumb{background:var(--epd-line)}
+.epd-foot{border-top:1px solid var(--epd-line);padding:2px 7px;font-size:9px;color:var(--epd-mid);
+  display:flex;justify-content:space-between;gap:6px;flex:none}
+
+.opt{display:flex;align-items:center;gap:6px;padding:2px 7px;min-height:21px;cursor:pointer}
+.opt:hover{background:rgba(22,22,15,.07)}
+.opt.sel{background:var(--epd-ink);color:var(--epd-paper)}
+.opt.sel:hover{background:var(--epd-ink)}
+.opt .tag{font-weight:600;border:1px solid currentColor;width:13px;height:13px;
+  display:inline-flex;align-items:center;justify-content:center;font-size:9px;flex:none}
+.opt .ico{width:15px;height:15px;flex:none}
+.opt .txt{flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opt .meta{font-size:9px;opacity:.72;flex:none}
+
+/* Startscherm zoals het toestel het toont: 3x3 ronde icoontegels met het
+   label eronder, en paginabolletjes. Touch is de eerste bediening; de letter
+   in de hoek is de sneltoets voor wie handschoenen aan heeft. */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:11px 6px;padding:14px 10px 6px}
+.tile{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;background:transparent;border:0}
+.tile .badge{width:50px;height:50px;border:1.5px solid var(--epd-ink);border-radius:13px;
+  display:flex;align-items:center;justify-content:center;position:relative}
+.tile:hover .badge{background:rgba(22,22,15,.09)}
+.tile .badge svg{width:26px;height:26px}
+.tile .kl{position:absolute;top:-4px;right:-4px;width:12px;height:12px;border:1px solid var(--epd-ink);
+  background:var(--epd-paper);font-size:8px;display:flex;align-items:center;justify-content:center}
+.tile b{font-size:9px;font-weight:500;text-align:center;line-height:1.15;max-width:66px}
+.dots{display:flex;gap:5px;justify-content:center;padding:4px 0 6px}
+.dots i{width:5px;height:5px;border-radius:50%;border:1px solid var(--epd-ink);display:block}
+.dots i.on{background:var(--epd-ink)}
+
+.epd-note{padding:4px 8px;font-size:10px}
+/* Dekking: vaste kolommen, want deze lijsten scan je, je leest ze niet. */
+.kop{padding:5px 8px 2px;font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--epd-mid);border-bottom:1px solid var(--epd-line);margin-bottom:2px}
+.buur{display:flex;align-items:baseline;gap:5px;padding:1px 8px;font-size:9.5px}
+.buur .bh{width:46px;flex:none;font-weight:600}
+.buur .bb{flex:none;letter-spacing:-1px}
+.buur .bm{flex:1;color:var(--epd-mid);font-size:8.5px;text-align:right}
+.buur .ba{width:34px;flex:none;text-align:right;font-size:8.5px;color:var(--epd-mid)}
+.pkt{display:flex;align-items:baseline;gap:5px;padding:1px 8px;font-size:9.5px}
+.pkt .pt{width:52px;flex:none;font-weight:600}
+.pkt .pr{width:76px;flex:none;color:var(--epd-mid);font-size:8.5px}
+.pkt .pd{flex:1;text-align:right;font-size:8.5px;color:var(--epd-mid);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.epd-kv{display:flex;gap:6px;padding:2px 8px;font-size:10px}
+.epd-kv .k{color:var(--epd-mid);width:78px;flex:none}
+.epd-kv .v{flex:1;font-weight:500;word-break:break-word}
+.epd-rule{height:1px;background:var(--epd-line);margin:4px 8px}
+.epd-big{padding:9px 8px 2px;font-size:15px;font-weight:600;letter-spacing:.02em}
+.epd-hex{padding:6px 8px;font-size:11px;word-break:break-all;line-height:1.5}
+.epd-prog{padding:3px 8px;font-size:10px;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.epd-prog .dot{width:6px;height:6px;border:1px solid var(--epd-ink);flex:none}
+.epd-prog .dot.on{background:var(--epd-ink)}
+.caret{border-bottom:2px solid currentColor;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{border-color:transparent}}
+@media (prefers-reduced-motion:reduce){.caret{animation:none}}
+
+/* chat */
+.msg{padding:3px 8px;font-size:10px;display:flex;gap:5px}
+.msg .who{font-weight:600;flex:none;max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msg .bd{flex:1;word-break:break-word}
+.msg .tm{font-size:8.5px;color:var(--epd-mid);flex:none}
+.msg.mine .who{color:var(--epd-mid)}
+.msg+.msg{border-top:1px dotted var(--epd-line)}
+/* Room-tabs: wisselen van kanaal is één tik, niet terug-en-opnieuw. */
+.tabs{display:flex;gap:3px;padding:3px 6px;overflow-x:auto;border-bottom:1px solid var(--epd-line);flex:none}
+.tabs::-webkit-scrollbar{height:0}
+.tab{border:1px solid var(--epd-line);padding:1px 5px;font-size:9px;white-space:nowrap;cursor:pointer}
+.tab:hover{background:rgba(22,22,15,.08)}
+.tab.on{background:var(--epd-ink);color:var(--epd-paper);border-color:var(--epd-ink)}
+.tab .n{font-size:8px;opacity:.7;margin-left:3px}
+
+.kb{margin-top:11px;display:flex;flex-direction:column;gap:4px;background:#E7E9EA;border:1px solid #CBD0D3;border-radius:8px;padding:6px 5px}
+.kb-row{display:flex;gap:4px;justify-content:center}
+.key{font-family:"IBM Plex Sans",sans-serif;background:#262626;color:#F2F2F2;
+  border:1px solid #111;border-bottom-width:2px;border-radius:7px;
+  min-width:24px;height:24px;font-size:10.5px;font-weight:500;
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0 5px;
+  user-select:none;position:relative}
+.key:hover{background:#363636}
+.key:active,.key.hit{background:var(--accent);border-color:var(--accent);color:#fff}
+.key:focus-visible{outline:2px solid #8FC7FF;outline-offset:1px}
+.key.wide{min-width:46px}
+.key.sp{min-width:104px}
+.key.alt.on{background:var(--amber);border-color:var(--amber);color:#1A1205}
+.key i{position:absolute;top:0;left:3px;font-size:6.5px;font-style:normal;opacity:.62;font-weight:400}
+.key.dood{opacity:.55;cursor:default}
+
+/* --------------------------------------------------------- panelen */
+.stack{display:flex;flex-direction:column;gap:18px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);padding:16px 16px 18px}
+.panel h2{font-family:"Barlow Semi Condensed",sans-serif;text-transform:uppercase;letter-spacing:.05em;
+  font-size:15px;margin:0 0 3px;font-weight:700}
+.panel .hint{color:var(--muted);font-size:12.5px;margin:0 0 13px}
+.wire{font-family:"IBM Plex Mono",monospace;background:var(--surface-2);border:1px solid var(--line-soft);
+  padding:9px 10px;font-size:11.5px;word-break:break-all;line-height:1.6;white-space:pre-wrap}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line-soft);
+  border:1px solid var(--line-soft);margin-top:12px}
+.metric{background:var(--surface);padding:9px 10px}
+.metric .m-k{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.metric .m-v{font-family:"IBM Plex Mono",monospace;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.metric .m-v small{font-size:11px;font-weight:400;color:var(--muted)}
+.metric.warn .m-v{color:var(--amber)}
+
+ol.trace{list-style:none;margin:0;padding:0;position:relative}
+ol.trace::before{content:"";position:absolute;left:6px;top:8px;bottom:8px;width:1px;background:var(--line)}
+ol.trace li{position:relative;padding:0 0 12px 24px;font-size:12.5px}
+ol.trace li:last-child{padding-bottom:0}
+ol.trace li .pip{position:absolute;left:0;top:4px;width:13px;height:13px;border-radius:50%;
+  border:2px solid var(--line);background:var(--surface)}
+ol.trace li.done .pip{border-color:var(--cool);background:var(--cool)}
+ol.trace li.ack .pip{border-color:var(--good);background:var(--good)}
+ol.trace li .ev-t{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+ol.trace li .ev-d{color:var(--muted);font-size:11.5px}
+ol.trace li.pending{opacity:.38}
+
+table.cat{width:100%;border-collapse:collapse;font-size:12.5px}
+table.cat th{text-align:left;font-weight:600;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);padding:0 8px 6px 0;border-bottom:1px solid var(--line)}
+table.cat td{padding:6px 8px 6px 0;border-bottom:1px solid var(--line-soft);vertical-align:top}
+table.cat td.n{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;text-align:right;padding-right:0;white-space:nowrap}
+table.cat tr.on td{background:var(--accent-soft)}
+.cat-wrap{overflow-x:auto}
+.tagmini{font-family:"IBM Plex Mono",monospace;font-size:10px;border:1px solid var(--line);padding:1px 4px;margin-right:6px}
+
+ul.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+ul.log li{border-left:3px solid var(--good);background:var(--surface-2);padding:7px 10px;font-size:12.5px}
+ul.log li.simulated{border-left-color:var(--cool)}
+ul.log li .t{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--muted)}
+.empty{color:var(--muted);font-size:12.5px;font-style:italic}
+
+.note{border-left:3px solid var(--accent);padding:2px 0 2px 12px;color:var(--muted);font-size:12.5px}
+.note+.note{margin-top:12px}
+.note strong{color:var(--ink)}
+.note code{font-family:"IBM Plex Mono",monospace;font-size:11.5px;background:var(--surface-2);padding:0 3px}
+footer.foot{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;max-width:78ch}
+kbd{font-family:"IBM Plex Mono",monospace;font-size:11px;border:1px solid var(--line);border-bottom-width:2px;padding:0 4px;background:var(--surface-2)}
+
+/* ------------------------------------------------ mobiel: toestel = pagina */
+.mobielbalk{display:none}
+.paneel-sluit{display:none}
+@media (max-width:900px){
+  body{padding:0}
+  .wrap{padding:0;max-width:none}
+  header.top{display:none}
+  footer.foot{display:none}
+  .cols{display:block;gap:0}
+
+  .mobielbalk{
+    display:flex;align-items:center;gap:10px;
+    position:sticky;top:env(safe-area-inset-top,0px);z-index:30;
+    background:var(--surface);border-bottom:1px solid var(--line);
+    padding:8px 12px;
+  }
+  .mobielbalk .mb-naam{
+    font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;
+    text-transform:uppercase;letter-spacing:.04em;font-size:17px;flex:1;
+  }
+  .mobielbalk .chip{font-size:10px;padding:2px 6px}
+  .mb-menu{
+    background:transparent;border:1px solid var(--line);color:var(--ink);
+    width:36px;height:32px;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;padding:0;border-radius:3px;
+  }
+  .mb-menu svg{width:17px;height:17px}
+  .mb-menu:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+  .device{
+    border-radius:0;border-left:0;border-right:0;box-shadow:none;
+    padding:10px 10px 8px;width:auto;margin:0;
+  }
+  .device .foot-brand{margin-top:6px}
+  .device + p{padding-inline:16px;padding-bottom:16px}
+
+  /* De werkbank wordt een overlay. Buiten beeld, niet verborgen: zo blijft
+     de inhoud leesbaar voor wie hem opent, en scrolt hij vanzelf terug. */
+  .stack{
+    position:fixed;inset:0;z-index:40;background:var(--ground);
+    overflow-y:auto;overscroll-behavior:contain;gap:16px;
+    padding:calc(12px + env(safe-area-inset-top,0px)) 16px
+            calc(24px + env(safe-area-inset-bottom,0px));
+    transform:translateX(100%);transition:transform .22s ease;
+    visibility:hidden;
+  }
+  body.paneel-open .stack{transform:none;visibility:visible}
+  body.paneel-open{overflow:hidden}
+  .paneel-sluit{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    position:sticky;top:0;z-index:2;margin:-4px -4px 0;padding:4px;
+    background:var(--ground);
+  }
+  .paneel-sluit b{
+    font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;
+    text-transform:uppercase;letter-spacing:.04em;font-size:17px;
+  }
+  .paneel-sluit button{
+    background:transparent;border:1px solid var(--line);color:var(--ink);
+    font-size:13px;padding:5px 11px;cursor:pointer;border-radius:3px;
+  }
+}
+@media (prefers-reduced-motion:reduce){ .stack{transition:none} }
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <div style="flex:1 1 320px;min-width:0">
+    <h1>FireDeck</h1>
+    <p class="sub">Een bedienbare T-Deck Pro op ware grootte &mdash; 3,1" e-paper, staand 240&times;320, touch &mdash;
+      met de mesh eronder nagespeeld: wie het hoort, wie het herhaalt, en wanneer de bevestiging terugkomt.</p>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+    <span class="chip" id="mode-chip">&mdash;</span>
+    <span class="chip">240&times;320 staand</span>
+    <span class="chip">CST328 touch</span>
+  </div>
+</header>
+
+<div class="mobielbalk">
+  <span class="mb-naam">FireDeck</span>
+  <span class="chip" id="mode-chip-m">&mdash;</span>
+  <button class="mb-menu" id="menu" type="button" aria-label="Meer tonen" aria-expanded="false">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+      <path d="M2 4h12M2 8h12M2 12h12"/>
+    </svg>
+  </button>
+</div>
+
+<div class="cols">
+
+  <div>
+    <div class="device">
+      <div class="brand"><span>LilyGo T-Deck Pro</span><span id="devstate">gereed</span></div>
+      <div class="screen-frame">
+        <div class="screen-scale">
+          <div id="screen" role="application" aria-label="Scherm van de T-Deck Pro"></div>
+        </div>
+      </div>
+      <div class="kb" id="kb"></div>
+      <div class="foot-brand">LILYGO</div>
+    </div>
+    <p style="text-align:center;color:var(--muted);font-size:11.5px;margin:10px auto 0;max-width:440px">
+      Tik op het scherm of gebruik je toetsenbord. Cijfers zitten op de <strong>alt-laag</strong>, net als op het
+      echte TCA8418-toetsenbord &mdash; daarom kiest dit ontwerp met <strong>letters</strong>: één aanslag, ook met
+      handschoenen aan.
+    </p>
+  </div>
+
+  <div class="stack" id="stack">
+
+    <div class="paneel-sluit">
+      <b>Achtergrond</b>
+      <button type="button" id="sluit">Sluiten</button>
+    </div>
+
+    <section class="panel">
+      <h2>Wat er over de lucht gaat</h2>
+      <p class="hint">Elke standaardwaarde is precies één byte. Dat is de hele reden om te laten kiezen in plaats van typen.</p>
+      <div class="wire" id="wire">&mdash;</div>
+      <div class="metrics">
+        <div class="metric"><div class="m-k">Nuttige last</div><div class="m-v" id="m-bytes">0<small> B</small></div></div>
+        <div class="metric"><div class="m-k">Pakket</div><div class="m-v" id="m-pkt">0<small> B</small></div></div>
+        <div class="metric" id="m-air-box"><div class="m-k">Zendtijd</div><div class="m-v" id="m-air">0<small> ms</small></div></div>
+      </div>
+      <p class="hint" style="margin:11px 0 0">
+        De zendtijd is een rechte lijn door twee pakketten uit je eigen repeaterlog
+        (28&nbsp;B&nbsp;&rarr;&nbsp;443&nbsp;ms en 44&nbsp;B&nbsp;&rarr;&nbsp;575&nbsp;ms), met 12&nbsp;B aangenomen MeshCore-kop.
+        Een schatting uit gemeten punten, geen uitkomst van de LoRa-formule.
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>Wat er in de mesh gebeurt</h2>
+      <p class="hint" id="trace-hint">Verstuur iets op het toestel; hier loopt het verloop mee.</p>
+      <ol class="trace" id="trace"></ol>
+    </section>
+
+    <section class="panel">
+      <h2>Berichtencatalogus</h2>
+      <p class="hint">Acht types, elk met zijn eigen aantal vervolgschermen. Plaatshouder &mdash; vervang dit door jullie echte meldingslijst.</p>
+      <div class="cat-wrap">
+        <table class="cat">
+          <thead><tr><th>Type</th><th>Vervolgschermen</th><th class="n">Bytes</th></tr></thead>
+          <tbody id="cat-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Verzonden</h2>
+      <p class="hint">Alles wat dit toestel de mesh in stuurde, met bestemming en zendtijd.</p>
+      <ul class="log" id="log"></ul>
+    </section>
+
+    <section class="panel">
+      <h2>Simulatie en werkelijkheid</h2>
+      <p class="note" id="note-mode">&mdash;</p>
+      <p class="note" style="border-left-color:var(--cool)">
+        Het scherm is <strong>exact 240&times;320</strong>, het GDEQ031T10-paneel zoals de T-Deck Pro het geroteerd gebruikt.
+        Wat hier past, past daar &mdash; en wat niet past, merk je nu in plaats van na het flashen.
+      </p>
+      <p class="note" style="border-left-color:var(--amber)">
+        Ripple UI is gesloten: geen bron, eigen fonts, geen LVGL. Eigen firmware bouw je op
+        <strong>Meck</strong> (GxEPD2, dit paneel) of MeshCore upstream.
+      </p>
+    </section>
+
+  </div>
+</div>
+
+<footer class="foot">
+  E-ink ververst traag en volledig &mdash; vandaar de flits bij elke schermwissel en het ontbreken van animatie:
+  elk scherm moet in één oogopslag leesbaar zijn, ook met een helm op.
+  Bediening: <kbd>A</kbd>&ndash;<kbd>H</kbd> kiezen, <kbd>Enter</kbd> bevestigen, <kbd>Backspace</kbd> terug,
+  <kbd>Esc</kbd> naar het startscherm.
+  <span style="float:right"><a href="/logout" style="color:var(--accent)">afmelden</a></span>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================================================================
+   * Iconen. Eén lijnstijl, geen vlakken: dat is wat een 1-bit e-ink
+   * paneel aankan, en wat op 15 px nog leesbaar blijft.
+   * ============================================================== */
+  var ICON = {
+    pomp:'<path d="M1.4 10.6V6.2h7.2v4.4"/><path d="M8.6 7.4h3.1l2.6 2.4v1.6h-5.7"/>'+
+         '<circle cx="4" cy="12.2" r="1.35"/><circle cx="11.4" cy="12.2" r="1.35"/>'+
+         '<path d="M2 5.2h6.2"/><path d="M3.3 3.4h1.6"/>',
+    brand:'<path d="M1.6 14V7.6L6 4.4l4.4 3.2V14"/><path d="M4.4 14v-3.4h3.2V14"/>'+
+          '<path d="M12.4 6.6c1.8 1.5 2.6 2.7 2.6 4a2.6 2.6 0 0 1-5.2 0c0-1.4 1-2.5 2.6-4z"/>',
+    porto:'<path d="M4.4 4.6h7.2v9.6H4.4z"/><path d="M10 4.6V2.2"/><path d="M6.2 6.6h3.6M6.2 8.4h3.6"/>'+
+          '<circle cx="8" cy="11.4" r="1.4"/>',
+    bijlen:'<path d="M3.4 13.4L11.4 4.6"/><path d="M11 2.2l3 2.6-1.9 2.1-3-2.6z"/>'+
+           '<path d="M12.6 13.4L4.6 4.6"/><path d="M5 2.2l-3 2.6 1.9 2.1 3-2.6z"/>',
+    brancard:'<path d="M1.2 11.6h13.6"/><path d="M2.6 10v3.2M13.4 10v3.2"/>'+
+             '<circle cx="4.6" cy="7.4" r="1.5"/><path d="M6.6 8.6h6.2v1.8H6.6z"/>',
+    hydrant:'<path d="M6 5.4h4v6.8H6z"/><path d="M6.6 3.6h2.8v1.8H6.6z"/>'+
+            '<path d="M3.6 7h2.4M10 7h2.4"/><path d="M4.4 13.6h7.2"/>',
+    uit:'<path d="M8 1.8s4 4.6 4 7.3a4 4 0 0 1-8 0C4 6.4 8 1.8 8 1.8z"/><path d="M2.4 13.8L13.6 2.4"/>',
+    kazerne:'<path d="M1.6 14.2V7L8 2.8 14.4 7v7.2z"/><path d="M5 14.2V9.4h6v4.8"/><path d="M8 2.8V1"/>',
+    /* app-iconen */
+    lijst:'<path d="M4.2 2.8h7.6v11.2H4.2z"/><path d="M6.2 1.6h3.6v2.2H6.2z"/>'+
+          '<path d="M6 7h4M6 9.2h4M6 11.4h2.4"/>',
+    bubbels:'<path d="M1.6 3h8.6v5.4H5l-2.4 2.1V8.4H1.6z"/><path d="M7 6.4h7.4v5h-1.4v2l-2.3-2H7"/>',
+    envelop:'<path d="M1.6 4h12.8v8H1.6z"/><path d="M1.6 4L8 8.8 14.4 4"/>',
+    kaart:'<path d="M1.6 3h12.8v10H1.6z"/><circle cx="5.4" cy="6.8" r="1.6"/>'+
+          '<path d="M3 11.2a2.5 2.5 0 0 1 4.8 0"/><path d="M9.4 6.4h3.2M9.4 9h3.2"/>',
+    doel:'<circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2.6"/><path d="M8 .8v2.2M8 13v2.2M.8 8h2.2M13 8h2.2"/>',
+    tandwiel:'<circle cx="8" cy="8" r="2.6"/><path d="M8 1.2v2M8 12.8v2M1.2 8h2M12.8 8h2M3.2 3.2l1.4 1.4M11.4 11.4l1.4 1.4M12.8 3.2l-1.4 1.4M4.6 11.4l-1.4 1.4"/>',
+    sat:'<path d="M8 12.4a4.4 4.4 0 0 0-4.4-4.4"/><path d="M8 15a7 7 0 0 0-7-7"/><circle cx="12.2" cy="3.8" r="2"/><path d="M1.4 14.6l3.2-3.2"/>',
+    accu:'<path d="M2 5h10v6H2z"/><path d="M12.8 7h1.4v2h-1.4z"/><path d="M4 6.6h2.6v2.8H4z"/>',
+    rooms:'<path d="M1.6 2.8h8.6v5.4H5l-2.4 2.1V8.2H1.6z"/><path d="M7 6.2h7.4v5h-1.4v2l-2.3-2H7"/><path d="M3.4 5.4h4.6"/>',
+    macht:'<path d="M8 1.6v6"/><path d="M4.4 4.2a5.4 5.4 0 1 0 7.2 0"/>',
+    dekking:'<path d="M2.4 14V9.4M6.1 14V7M9.9 14V4.6M13.6 14V2.2"/>',
+    alarm:'<path d="M8 1.6l6.4 11.6H1.6z"/><path d="M8 6v3.4"/><circle cx="8" cy="11.4" r=".7"/>',
+    logboek:'<path d="M3.4 2.4h9.2v11.2H3.4z"/><path d="M5.6 5.4h4.8M5.6 8h4.8M5.6 10.6h2.8"/>',
+    radio:'<circle cx="8" cy="8" r="1.8"/><path d="M4.6 4.6a4.8 4.8 0 0 0 0 6.8M11.4 11.4a4.8 4.8 0 0 0 0-6.8"/>'+
+          '<path d="M2.2 2.2a8.2 8.2 0 0 0 0 11.6M13.8 13.8a8.2 8.2 0 0 0 0-11.6"/>',
+    wifi:'<path d="M1.6 5.6a9 9 0 0 1 12.8 0M4.2 8.4a5.3 5.3 0 0 1 7.6 0M6.6 11a2 2 0 0 1 2.8 0"/>'+
+         '<circle cx="8" cy="13.4" r=".8"/>',
+    klok:'<circle cx="8" cy="8" r="6.2"/><path d="M8 4.4V8l2.6 1.6"/>',
+    chip:'<path d="M5 5h6v6H5z"/><path d="M6.6 2.4v2.6M9.4 2.4v2.6M6.6 11v2.6M9.4 11v2.6"/>'+
+         '<path d="M2.4 6.6h2.6M2.4 9.4h2.6M11 6.6h2.6M11 9.4h2.6"/>',
+    info:'<circle cx="8" cy="8" r="6.2"/><path d="M8 7.2v4"/><circle cx="8" cy="4.9" r=".7"/>'
+  };
+
+  /* ================================================================
+   * Berichtencatalogus. Eén plaats om jullie echte meldingslijst te
+   * zetten. Het ene 'text'-veld zit er bewust in: zo blijft het
+   * verschil in bytes tussen kiezen en typen zichtbaar.
+   * ============================================================== */
+  var CATALOG = [
+    { code:"UIT", label:"Uitgerukt", icon:"pomp", fields:[
+      { label:"Voertuig", opts:["Autopomp 1","Autopomp 2","Ladderwagen","Tankwagen","Ziekenwagen","Commandowagen"] },
+      { label:"Bemanning", opts:["2","4","6","8"] },
+      { label:"Aankomst", opts:["< 5 min","5-10 min","10-20 min","> 20 min"] } ]},
+    { code:"TPL", label:"Ter plaatse", icon:"brand", fields:[
+      { label:"Wat zie je", opts:["Niets te zien","Rookontwikkeling","Vlammen zichtbaar","Volledig in brand","Loos alarm"] },
+      { label:"Toegang", opts:["Vrij","Belemmerd","Geblokkeerd"] } ]},
+    { code:"SIT", label:"Situatierapport", icon:"porto", fields:[
+      { label:"Omvang", opts:["Beperkt","Uitbreidend","Stabiel","Onder controle"] },
+      { label:"Inzet", opts:["Binnenaanval","Buitenaanval","Defensief","Verkenning"] },
+      { label:"Risico", opts:["Geen bijzonder","Gas","Elektriciteit","Instortingsgevaar","Gevaarlijke stof"] },
+      { label:"Vrije tekst", type:"text", max:24 } ]},
+    { code:"ASS", label:"Assistentie gevraagd", icon:"bijlen", fields:[
+      { label:"Wat", opts:["2e autopomp","Ladderwagen","Ademluchtploeg","Ziekenwagen","Politie","Gas/elektriciteit"] },
+      { label:"Urgentie", opts:["Dringend","Normaal"] } ]},
+    { code:"SLA", label:"Slachtoffers", icon:"brancard", fields:[
+      { label:"Aantal", opts:["0","1","2","3","4 of meer"] },
+      { label:"Toestand", opts:["Niet gewond","Licht gewond","Ernstig","Kritiek"] },
+      { label:"Bevrijding", opts:["Niet nodig","Technisch nodig","Bezig"] } ]},
+    { code:"WAT", label:"Water en middelen", icon:"hydrant", fields:[
+      { label:"Behoefte", opts:["Voldoende","Tankwagen","Hydrant gezocht","Open water","Schuim"] } ]},
+    { code:"OKD", label:"Onder controle", icon:"uit", fields:[
+      { label:"Nablussen", opts:["Niet nodig","Bezig","Nog uren"] },
+      { label:"Ploegen ter plaatse", opts:["1","2","3","4 of meer"] } ]},
+    { code:"RET", label:"Retour post", icon:"kazerne", fields:[
+      { label:"Beschikbaarheid", opts:["Direct inzetbaar","Na reiniging","Buiten dienst"] } ]}
+  ];
+
+  /* De contacten die de openHop-companion werkelijk kent. */
+  var CONTACTS = [
+    { name:"BE-HSS-DinX-OpenHopRoom", key:"b405ac3d0aadffead6dba83695ec23d646dca34c69c32526bcbd480673b79d7f", kind:"room",    heard:"2 min" },
+    { name:"BE-HSS-DinX",             key:"2cb0c5eb473757805eab00f9dd0594c229d6e50b2acec6b57403b6259c9e126f", kind:"contact", heard:"6 min" },
+    { name:"BE-HSS-DinX-OpenHop",     key:"5c39af291cb93c9fc759bf9e1a35fc42895903ef7d5351e237cc8cc3fdc5bb70", kind:"contact", heard:"1 min" },
+    { name:"BE-RLA-4TP-01",           key:"7a532458318b0bf839d47ab61decd129ad852293e4d3d0c46030953692929bd3", kind:"contact", heard:"41 min" },
+    { name:"BE-TWI-EDG-02",           key:"0a513b3794f2c1c99c1850a55420c844147a28917fc66af6d0619c1bc2e76847", kind:"contact", heard:"1 u" },
+    { name:"BE-DIE-ST-CVO-ESP",       key:"3c8d8ef8d3e25a3d12a0d96ce9a5dc23fcb94e6af96c85c3dcb9318235712b57", kind:"contact", heard:"3 u" },
+    { name:"BE-SPU-Scherpenheuvel-E", key:"f307fa081b265ddc86369cb69ad789a7a9d1dff799151a1d5d3fe0ebc19b6cfe", kind:"contact", heard:"5 u" }
+  ];
+
+  /* Momentopname van echte gegevens, voor als er geen brug is. Bevroren,
+     niet verzonnen: zo stond het werkelijk in de mesh toen deze pagina gebouwd
+     werd. Met brug overschrijft /mesh dit meteen. */
+  var SNAP = {"buren":[{"hash":"5C","rssi":-66.0,"snr":11.7,"score":1.0,"leeftijd":383,"monsters":4,"actief":true},{"hash":"5C39","rssi":-66.0,"snr":13.7,"score":0.9896577829370086,"leeftijd":40,"monsters":238,"actief":true},{"hash":"5C39AF","rssi":-60.0,"snr":13.5,"score":0.9519200000000001,"leeftijd":595,"monsters":7,"actief":true},{"hash":"E3D3","rssi":-98.0,"snr":0.2,"score":0.8751858278258499,"leeftijd":57,"monsters":322,"actief":true},{"hash":"E3D3F4","rssi":-100.0,"snr":3.7,"score":0.8337335972440001,"leeftijd":602,"monsters":14,"actief":true},{"hash":"E470","rssi":-114.0,"snr":-8.0,"score":0.16724019506924337,"leeftijd":37,"monsters":55,"actief":true},{"hash":"98","rssi":-116.0,"snr":-9.7,"score":0.01619250000000002,"leeftijd":387,"monsters":5,"actief":true},{"hash":"98D4","rssi":-115.0,"snr":-11.5,"score":0.0,"leeftijd":345,"monsters":7,"actief":true}],"pakketten":[{"type":"REQ","route":"direct","len":20,"rssi":-61,"snr":12.5,"hops":1,"pad":"53C2","via":null,"door":false,"weg":"Direct: not for us"},{"type":"RESPONSE","route":"direct","len":84,"rssi":-101,"snr":4.5,"hops":0,"pad":"","via":null,"door":false,"weg":null},{"type":"RESPONSE","route":"direct","len":84,"rssi":-96,"snr":3.5,"hops":0,"pad":"","via":null,"door":false,"weg":null},{"type":"REQ","route":"direct","len":20,"rssi":-66,"snr":13.7,"hops":0,"pad":"","via":null,"door":false,"weg":null},{"type":"PATH","route":"transport flood","len":100,"rssi":-114,"snr":-8.0,"hops":1,"pad":"E470","via":"E470","door":false,"weg":"Duplicate"},{"type":"PATH","route":"transport flood","len":100,"rssi":-100,"snr":4.7,"hops":0,"pad":"","via":null,"door":false,"weg":"TX failed"},{"type":"PATH","route":"direct","len":20,"rssi":-66,"snr":13.7,"hops":0,"pad":"","via":null,"door":false,"weg":"Direct: no path"},{"type":"REQ","route":"transport flood","len":20,"rssi":-66,"snr":13.7,"hops":1,"pad":"5C39","via":"5C39","door":false,"weg":"Duplicate"},{"type":"REQ","route":"transport flood","len":20,"rssi":-66,"snr":12.2,"hops":0,"pad":"","via":null,"door":true,"weg":null},{"type":"PATH","route":"transport flood","len":100,"rssi":-97,"snr":1.5,"hops":0,"pad":"","via":null,"door":false,"weg":"Duplicate"}],"verkeer":{"Transport Flood":5863,"Flood":530,"Direct":2352},"contacten":69,"bevroren":true};
+  var LETTERS = "ABCDEFGH";
+  var HEX = "0123456789ABCDEF";
+  var KB_ROWS = [["Q","W","E","R","T","Y","U","I","O","P"],
+                 ["A","S","D","F","G","H","J","K","L"],
+                 ["Z","X","C","V","B","N","M"]];
+  /* De alt-laag zoals hij op de toetsen van dit toestel gedrukt staat. De
+     cijfers liggen verspreid over drie rijen -- vandaar dat deze UI met
+     letters laat kiezen en niet met nummers. */
+  var ALTMAP = {Q:"#",W:"1",E:"2",R:"3",T:"(",Y:")",U:"_",I:"-",O:"+",P:"@",
+                A:"*",S:"4",D:"5",F:"6",G:"/",H:":",J:";",K:"'",L:'"',
+                Z:"7",X:"8",C:"9",V:"?",B:"!",N:",",M:"."};
+
+  var DEFAULT_DESTS = [
+    { naam:"Dispatch",   key:CONTACTS[0].key, kind:"room",    vast:true },
+    { naam:"Pager DinX", key:CONTACTS[1].key, kind:"contact", vast:false }
+  ];
+
+  var st = {
+    view:"apps", app:null,
+    type:0, step:0, picks:[], text:"",
+    dest:0, dests:DEFAULT_DESTS.slice(),
+    input:"", inputCtx:null, inputMax:64,
+    thread:null, chat:{}, alt:false, info:null, roomKey:false, pagina:0,
+    rooms:[ {naam:"Ploeg 04", key:CONTACTS[0].key, kind:"room"} ],
+    log:[], trace:[], traceNow:"", busy:false,
+    ok:true, routeText:"", rtt:0
+  };
+  var LIVE = { on:false };
+  var MESH = SNAP;
+  var timers = [];
+
+  /* Een room die al wat verkeer gezien heeft, zodat het scherm bij het
+     openen iets toont in plaats van leeg te staan. */
+  st.chat[CONTACTS[0].key] = [
+    { who:"Dispatch", tm:"08:12", body:"Oproep 24-113, Kuringersteenweg, rookontwikkeling." },
+    { who:"AP-02",    tm:"08:14", body:"Uitgerukt · Autopomp 2 · 6 · 5-10 min" },
+    { who:"Dispatch", tm:"08:15", body:"Begrepen. TK volgt." }
+  ];
+
+  try{ var sv = JSON.parse(localStorage.getItem("tdeck-state") || "null");
+       if(sv){ if(sv.log) st.log = sv.log; if(sv.dests && sv.dests.length) st.dests = sv.dests;
+                if(typeof sv.dest==="number") st.dest = sv.dest; if(sv.rooms && sv.rooms.length) st.rooms = sv.rooms; }
+  }catch(e){}
+  function bewaar(){
+    try{ localStorage.setItem("tdeck-state", JSON.stringify({log:st.log,dests:st.dests,dest:st.dest,rooms:st.rooms})); }catch(e){}
+  }
+
+  var scr = document.getElementById("screen");
+  function dest(){ return st.dests[Math.min(st.dest, st.dests.length-1)] || st.dests[0]; }
+
+  /* ---------------------------------------------------- codering */
+  function payload(){
+    var t = CATALOG[st.type], b = [0xF1, st.type+1];
+    t.fields.forEach(function(f,i){
+      if(f.type === "text"){
+        var s = st.picks[i] || "";
+        b.push(0xFF, s.length);
+        for(var j=0;j<s.length;j++) b.push(s.charCodeAt(j) & 0x7F);
+      }else b.push(typeof st.picks[i]==="number" ? st.picks[i]+1 : 0);
+    });
+    return b;
+  }
+  function hex(a){ return a.map(function(x){return ("0"+x.toString(16)).slice(-2).toUpperCase();}).join(" "); }
+  function airtime(n){ return Math.round(214 + 8.19*n); }
+  function humanLine(){
+    var t = CATALOG[st.type], p=[t.label];
+    t.fields.forEach(function(f,i){
+      var v = st.picks[i];
+      if(f.type==="text"){ if(v) p.push('"'+v+'"'); }
+      else if(typeof v==="number") p.push(f.opts[v]);
+    });
+    return p.join(" · ");
+  }
+  function maxBytes(t){ var n=2; t.fields.forEach(function(f){ n += f.type==="text" ? 2+(f.max||24) : 1; }); return n; }
+
+  /* ---------------------------------------------------- bouwstenen */
+  function el(tag,cls,txt){ var e=document.createElement(tag); if(cls)e.className=cls; if(txt!==undefined)e.textContent=txt; return e; }
+  function svgIcon(name,cls){
+    var s=document.createElementNS("http://www.w3.org/2000/svg","svg");
+    s.setAttribute("viewBox","0 0 16 16"); s.setAttribute("class",cls||"ico");
+    s.setAttribute("fill","none"); s.setAttribute("stroke","currentColor");
+    s.setAttribute("stroke-width","1.3"); s.setAttribute("stroke-linejoin","round"); s.setAttribute("stroke-linecap","round");
+    s.innerHTML = ICON[name]||""; return s;
+  }
+  function row(letter,text,meta,sel,icon,onTap){
+    var r = el("div","opt"+(sel?" sel":""));
+    if(letter) r.appendChild(el("span","tag",letter));
+    if(icon) r.appendChild(svgIcon(icon));
+    r.appendChild(el("span","txt",text));
+    if(meta) r.appendChild(el("span","meta",meta));
+    if(onTap) r.addEventListener("click",onTap);
+    return r;
+  }
+
+  /* Twee pagina's: de eerste is wat je tijdens een inzet nodig hebt, de
+     tweede is het toestel zelf. Wie handschoenen aan heeft, blijft op één. */
+  var PAGINAS = [
+    [ { key:"msg",   naam:"Bericht",    icon:"lijst"   },
+      { key:"rooms", naam:"Rooms",      icon:"rooms"   },
+      { key:"dm",    naam:"Direct",     icon:"envelop" },
+      { key:"cont",  naam:"Contacten",  icon:"kaart"   },
+      { key:"dest",  naam:"Bestemming", icon:"doel"    },
+      { key:"dek",   naam:"Dekking",    icon:"dekking" },
+      { key:"log",   naam:"Logboek",    icon:"logboek" },
+      { key:"pos",   naam:"Positie",    icon:"sat"     },
+      { key:"alarm", naam:"Alarm",      icon:"alarm"   } ],
+    [ { key:"accu",  naam:"Accu",       icon:"accu"    },
+      { key:"radio", naam:"Radio",      icon:"radio"   },
+      { key:"gps",   naam:"GPS",        icon:"sat"     },
+      { key:"klok",  naam:"Tijd",       icon:"klok"    },
+      { key:"inst",  naam:"Instellingen", icon:"tandwiel" },
+      { key:"chip",  naam:"Toestel",    icon:"chip"    },
+      { key:"test",  naam:"Zendtest",   icon:"doel"    },
+      { key:"over",  naam:"Over",       icon:"info"    },
+      { key:"uit",   naam:"Afsluiten",  icon:"macht"   } ]
+  ];
+  var APPS = PAGINAS[0];
+
+  /* ---------------------------------------------------- scherm */
+  function render(flash){
+    scr.textContent = "";
+    var d = dest();
+
+    var bar = el("div","epd-bar");
+    bar.appendChild(el("span",null,"BE-HSS-BW-04"));
+    bar.appendChild(el("span",null,"▂▄▆ -71dBm · 87% · 08:21"));
+    scr.appendChild(bar);
+
+    var head = el("div","epd-title"), crumb = el("div","epd-crumb"),
+        body = el("div","epd-body"), foot = el("div","epd-foot");
+
+    var v = st.view;
+
+    if(v === "apps"){
+      head.appendChild(el("span",null,"Brandweerpost 04"));
+      crumb.textContent = "standaard naar " + d.naam + " · " + d.key.slice(0,8);
+      var grid = el("div","tiles");
+      PAGINAS[st.pagina].forEach(function(a,i){
+        var t = el("div","tile");
+        var badge = el("div","badge");
+        badge.appendChild(svgIcon(a.icon,"ico"));
+        badge.appendChild(el("span","kl", "ABCDEFGHI".charAt(i)));
+        t.appendChild(badge);
+        t.appendChild(el("b",null,a.naam));
+        t.addEventListener("click", function(){ openApp(a.key); });
+        grid.appendChild(t);
+      });
+      body.appendChild(grid);
+      /* Vegen, op een bolletje tikken of de pijltjes: in een wagen lukt de
+         ene manier beter dan de andere. */
+      var dots = el("div","dots");
+      PAGINAS.forEach(function(_,pi){
+        var b = el("i", pi===st.pagina ? "on" : "");
+        b.addEventListener("click", function(){ st.pagina=pi; render(true); });
+        dots.appendChild(b);
+      });
+      body.appendChild(dots);
+      var x0 = null;
+      grid.addEventListener("pointerdown", function(e){ x0 = e.clientX; });
+      grid.addEventListener("pointerup", function(e){
+        if(x0 === null) return;
+        var dx = e.clientX - x0; x0 = null;
+        if(Math.abs(dx) < 24) return;
+        blader(dx < 0 ? 1 : -1);
+      });
+      foot.appendChild(el("span",null,"tik of druk A-I"));
+      foot.appendChild(el("span",null,LIVE.on ? "mesh verbonden" : "gesimuleerd"));
+
+    }else if(v === "types"){
+      head.appendChild(el("span",null,"Bericht kiezen"));
+      crumb.textContent = "naar " + d.naam + " · " + d.key.slice(0,8);
+      CATALOG.forEach(function(t,i){
+        body.appendChild(row(LETTERS[i], t.label, t.fields.length+" ▸", false, t.icon, function(){ choose(i); }));
+      });
+      foot.appendChild(el("span",null,"tik of druk A-H"));
+      foot.appendChild(el("span",null,"← terug"));
+
+    }else if(v === "field"){
+      var t = CATALOG[st.type], f = t.fields[st.step];
+      head.appendChild(el("span",null,f.label));
+      head.appendChild(el("span","step",(st.step+1)+"/"+t.fields.length));
+      crumb.textContent = t.label + (st.step ? " › "+t.fields.slice(0,st.step).map(function(ff,ii){
+        return ff.type==="text" ? (st.picks[ii]||"—") : ff.opts[st.picks[ii]];
+      }).join(" › ") : "");
+      if(f.type === "text"){
+        body.appendChild(el("div","epd-note","Typ een korte toelichting. Elke letter is een byte extra."));
+        var box = el("div","epd-big");
+        box.appendChild(document.createTextNode(st.text));
+        box.appendChild(el("span","caret"," "));
+        body.appendChild(box);
+        body.appendChild(el("div","epd-rule"));
+        var kv=el("div","epd-kv"); kv.appendChild(el("span","k","Ruimte"));
+        kv.appendChild(el("span","v", st.text.length+" / "+(f.max||24)+" tekens")); body.appendChild(kv);
+        foot.appendChild(el("span",null,"Enter = klaar"));
+        foot.appendChild(el("span",null,"leeg mag ook"));
+      }else{
+        f.opts.forEach(function(o,i){
+          body.appendChild(row(LETTERS[i], o, null, st.picks[st.step]===i, null, function(){ choose(i); }));
+        });
+        foot.appendChild(el("span",null,"A-"+LETTERS[f.opts.length-1]+" kiezen"));
+        foot.appendChild(el("span",null,"← terug"));
+      }
+
+    }else if(v === "confirm"){
+      var b = payload(), total = b.length+12, t2 = CATALOG[st.type];
+      head.appendChild(el("span",null,"Verzenden?"));
+      crumb.textContent = "naar " + d.naam + " · " + d.key.slice(0,8);
+      t2.fields.forEach(function(f,i){
+        var kv=el("div","epd-kv"); kv.appendChild(el("span","k",f.label));
+        kv.appendChild(el("span","v", f.type==="text" ? (st.picks[i]||"—") : f.opts[st.picks[i]]));
+        body.appendChild(kv);
+      });
+      body.appendChild(el("div","epd-rule"));
+      var kv2=el("div","epd-kv"); kv2.appendChild(el("span","k","Pakket"));
+      kv2.appendChild(el("span","v", total+" B · ±"+airtime(total)+" ms")); body.appendChild(kv2);
+      foot.appendChild(el("span",null,"Enter = verzenden"));
+      foot.appendChild(el("span",null,"← terug"));
+
+    }else if(v === "sending"){
+      head.appendChild(el("span",null,"Verzenden"));
+      crumb.textContent = "naar " + d.naam;
+      body.appendChild(el("div","epd-big", (st.app==="msg" ? CATALOG[st.type].code : "TXT") + " → " + d.naam));
+      var pr = el("div","epd-prog");
+      st.trace.forEach(function(e){ pr.appendChild(el("span","dot"+(e.done?" on":""))); });
+      pr.appendChild(el("span",null, st.traceNow||"zenden…"));
+      body.appendChild(pr);
+      body.appendChild(el("div","epd-rule"));
+      body.appendChild(el("div","epd-note", st.lastText||""));
+      foot.appendChild(el("span",null,"bezig…"));
+
+    }else if(v === "sent"){
+      head.appendChild(el("span",null, st.ok ? "Bevestigd" : "Geen bevestiging"));
+      crumb.textContent = "naar " + d.naam;
+      body.appendChild(el("div","epd-big",(st.ok?"✓ ":"✗ ")+(st.app==="msg"?CATALOG[st.type].code:"Bericht")));
+      body.appendChild(el("div","epd-note", st.lastText||""));
+      body.appendChild(el("div","epd-rule"));
+      var k1=el("div","epd-kv"); k1.appendChild(el("span","k","Route")); k1.appendChild(el("span","v",st.routeText||"—")); body.appendChild(k1);
+      var k2=el("div","epd-kv"); k2.appendChild(el("span","k","Heen en weer")); k2.appendChild(el("span","v",(st.rtt||0)+" ms")); body.appendChild(k2);
+      foot.appendChild(el("span",null,"Enter = verder"));
+
+    }else if(v === "thread"){
+      var c = st.thread;
+      head.appendChild(el("span",null, c.kind==="room" ? "Ploegchat" : "Bericht"));
+      crumb.textContent = c.name + " · " + c.key.slice(0,8);
+      if(c.kind === "room" && st.rooms.length){
+        var tabs = el("div","tabs");
+        st.rooms.forEach(function(r){
+          var tb = el("span","tab"+(r.key===c.key?" on":""), r.naam);
+          var n = (st.chat[r.key]||[]).length;
+          if(n && r.key!==c.key) tb.appendChild(el("span","n", String(n)));
+          tb.addEventListener("click", function(){ openThread(r); });
+          tabs.appendChild(tb);
+        });
+        var plus = el("span","tab","+");
+        plus.addEventListener("click", function(){ st.view="roompick"; render(true); });
+        tabs.appendChild(plus);
+        crumb.appendChild(document.createTextNode(""));
+        body.appendChild(tabs);
+      }
+      var lijst = st.chat[c.key] || [];
+      if(!lijst.length) body.appendChild(el("div","epd-note","Nog geen berichten."));
+      lijst.forEach(function(m){
+        var r = el("div","msg"+(m.mine?" mine":""));
+        r.appendChild(el("span","who", m.mine ? "ik" : m.who));
+        r.appendChild(el("span","bd", m.body));
+        r.appendChild(el("span","tm", m.tm));
+        body.appendChild(r);
+      });
+      foot.appendChild(el("span",null,"Enter = schrijven"));
+      foot.appendChild(el("span",null,"← terug"));
+
+    }else if(v === "compose"){
+      head.appendChild(el("span",null,"Schrijven"));
+      crumb.textContent = "naar " + st.thread.name;
+      var box2 = el("div","epd-big");
+      box2.appendChild(document.createTextNode(st.input));
+      box2.appendChild(el("span","caret"," "));
+      body.appendChild(box2);
+      body.appendChild(el("div","epd-rule"));
+      var k3=el("div","epd-kv"); k3.appendChild(el("span","k","Pakket"));
+      k3.appendChild(el("span","v",(st.input.length+18)+" B · ±"+airtime(st.input.length+18)+" ms")); body.appendChild(k3);
+      foot.appendChild(el("span",null,"Enter = verzenden"));
+      foot.appendChild(el("span",null,st.input.length+"/120"));
+
+    }else if(v === "rooms"){
+      head.appendChild(el("span",null,"Rooms"));
+      crumb.textContent = st.rooms.length + " kanaal(en) · wisselen kan ook vanuit een gesprek";
+      st.rooms.forEach(function(r,i){
+        var n = (st.chat[r.key]||[]).length;
+        body.appendChild(row(LETTERS[i], r.naam, n ? n+" ber." : "leeg", false, "bubbels", function(){ openThread(r); }));
+      });
+      body.appendChild(el("div","epd-rule"));
+      body.appendChild(row("Y","Toevoegen uit contacten",null,false,"kaart",function(){ st.view="roompick"; render(true); }));
+      body.appendChild(row("U","Toevoegen via sleutel",null,false,"doel",function(){ st.input=""; st.roomKey=true; st.view="destkey"; render(true); }));
+      foot.appendChild(el("span",null,"A-H openen"));
+      foot.appendChild(el("span",null,"← terug"));
+
+    }else if(v === "roompick"){
+      head.appendChild(el("span",null,"Room toevoegen"));
+      crumb.textContent = "Kies wie als kanaal moet meedraaien.";
+      CONTACTS.forEach(function(c,i){
+        body.appendChild(row(LETTERS[i], c.name, c.kind==="room" ? "room" : "node", false, null, function(){
+          st.rooms.push({naam:c.name.replace(/^BE-[A-Z]+-/,"").slice(0,14), key:c.key, kind:"room"});
+          bewaar(); st.view="rooms"; render(true);
+        }));
+      });
+      foot.appendChild(el("span",null,"A-G kiezen"));
+      foot.appendChild(el("span",null,"← terug"));
+
+    }else if(v === "dek"){
+      head.appendChild(el("span",null,"Dekking"));
+      head.appendChild(el("span","step", MESH.bevroren ? "momentopname" : "live"));
+      crumb.textContent = MESH.buren.length + " buren gehoord \u00B7 " +
+        (typeof MESH.contacten==="number" ? MESH.contacten : "?") + " nodes bekend";
+
+      body.appendChild(el("div","kop","Wie we rechtstreeks horen"));
+      MESH.buren.slice(0,6).forEach(function(b){
+        var r = el("div","buur");
+        r.appendChild(el("span","bh", b.hash));
+        r.appendChild(el("span","bb", balk(b.score)));
+        r.appendChild(el("span","bm", (b.rssi!=null?Math.round(b.rssi):"?")+" dBm \u00B7 "+
+          (b.snr!=null?Number(b.snr).toFixed(1):"?")+" dB"));
+        r.appendChild(el("span","ba", ouder(b.leeftijd)));
+        body.appendChild(r);
+      });
+
+      var d2 = dest();
+      body.appendChild(el("div","kop","Weg naar "+d2.naam));
+      var pk = null;
+      for(var qi=0; qi<MESH.pakketten.length; qi++){
+        if(MESH.pakketten[qi].hops){ pk = MESH.pakketten[qi]; break; }
+      }
+      var kvA = el("div","epd-kv");
+      kvA.appendChild(el("span","k","Pad"));
+      kvA.appendChild(el("span","v","onbekend \u00B7 gaat als flood"));
+      body.appendChild(kvA);
+      if(pk){
+        var kvB = el("div","epd-kv");
+        kvB.appendChild(el("span","k","Laatst gezien"));
+        kvB.appendChild(el("span","v", pk.hops+" hops via "+(pk.via||"?")));
+        body.appendChild(kvB);
+        var kvC = el("div","epd-kv");
+        kvC.appendChild(el("span","k","Route"));
+        kvC.appendChild(el("span","v", pk.pad || "\u2014"));
+        body.appendChild(kvC);
+      }
+
+      body.appendChild(el("div","kop","Laatste berichten"));
+      MESH.pakketten.slice(0,8).forEach(function(x){
+        var r = el("div","pkt");
+        r.appendChild(el("span","pt", x.type));
+        r.appendChild(el("span","pr", x.hops+"h \u00B7 "+(x.rssi!=null?x.rssi:"?")+"dBm"));
+        r.appendChild(el("span","pd", x.door ? "herhaald" : (x.weg||"\u2014")));
+        body.appendChild(r);
+      });
+
+      body.appendChild(el("div","kop","Laatste 24 uur"));
+      Object.keys(MESH.verkeer||{}).forEach(function(k){
+        var kv = el("div","epd-kv");
+        kv.appendChild(el("span","k",k));
+        kv.appendChild(el("span","v", String(MESH.verkeer[k])));
+        body.appendChild(kv);
+      });
+
+      foot.appendChild(el("span",null,"R = verversen"));
+      foot.appendChild(el("span",null,"\u2190 terug"));
+
+    }else if(v === "pos"){
+      head.appendChild(el("span",null,"Locatie sturen"));
+      crumb.textContent = "naar " + dest().naam;
+      body.appendChild(el("div","epd-note",
+        "Je huidige positie, zonder verdere tekst. Elf bytes."));
+      body.appendChild(el("div","epd-big","50.9294, 5.3122"));
+      body.appendChild(el("div","epd-rule"));
+      var kp1=el("div","epd-kv"); kp1.appendChild(el("span","k","Fix"));
+      kp1.appendChild(el("span","v","3D · 9 satellieten")); body.appendChild(kp1);
+      var kp2=el("div","epd-kv"); kp2.appendChild(el("span","k","Nauwkeurig"));
+      kp2.appendChild(el("span","v","± 3,1 m")); body.appendChild(kp2);
+      var kp3=el("div","epd-kv"); kp3.appendChild(el("span","k","Pakket"));
+      kp3.appendChild(el("span","v","30 B · ±"+airtime(30)+" ms")); body.appendChild(kp3);
+      foot.appendChild(el("span",null,"Enter = versturen"));
+      foot.appendChild(el("span",null,"← terug"));
+
+    }else if(v === "alarm"){
+      head.appendChild(el("span",null,"MAYDAY"));
+      crumb.textContent = "naar " + dest().naam;
+      body.appendChild(el("div","epd-note",
+        "Dit stuurt onmiddellijk een noodoproep met je positie. Geen keuzeschermen."));
+      body.appendChild(el("div","epd-big","\u26A0 MAYDAY"));
+      body.appendChild(el("div","epd-rule"));
+      var ka=el("div","epd-kv"); ka.appendChild(el("span","k","Van"));
+      ka.appendChild(el("span","v","BE-HSS-BW-04")); body.appendChild(ka);
+      var kb2=el("div","epd-kv"); kb2.appendChild(el("span","k","Positie"));
+      kb2.appendChild(el("span","v","50.9294, 5.3122")); body.appendChild(kb2);
+      foot.appendChild(el("span",null,"Enter = versturen"));
+      foot.appendChild(el("span",null,"\u2190 annuleren"));
+
+    }else if(v === "info"){
+      head.appendChild(el("span",null,st.info.titel));
+      crumb.textContent = st.info.sub;
+      st.info.rijen.forEach(function(r){
+        var kv = el("div","epd-kv");
+        kv.appendChild(el("span","k",r[0]));
+        kv.appendChild(el("span","v",r[1]));
+        body.appendChild(kv);
+      });
+      foot.appendChild(el("span",null,"← terug"));
+
+    }else if(v === "dmlist"){
+      head.appendChild(el("span",null,"Berichten"));
+      crumb.textContent = "Kies een contact voor een direct bericht.";
+      CONTACTS.filter(function(c){return c.kind!=="room";}).forEach(function(c,i){
+        var n = (st.chat[c.key]||[]).length;
+        body.appendChild(row(LETTERS[i], c.name, n ? n+" ber." : c.heard, false, null, function(){ openThread(c); }));
+      });
+      foot.appendChild(el("span",null,"A-F kiezen"));
+      foot.appendChild(el("span",null,"← terug"));
+
+    }else if(v === "cont"){
+      head.appendChild(el("span",null,"Contacten"));
+      crumb.textContent = CONTACTS.length + " gekend · pad onbekend = flood";
+      CONTACTS.forEach(function(c){
+        body.appendChild(row(null, c.name, c.key.slice(0,8)+" · "+c.heard, false,
+          c.kind==="room" ? "bubbels" : "kaart", function(){ if(c.kind!=="room") openThread(c); else openThread(c); }));
+      });
+      foot.appendChild(el("span",null,"tik = openen"));
+      foot.appendChild(el("span",null,"← terug"));
+
+    }else if(v === "dest"){
+      head.appendChild(el("span",null,"Bestemmingen"));
+      crumb.textContent = "De gemarkeerde is de standaard voor een ploegbericht.";
+      st.dests.forEach(function(x,i){
+        body.appendChild(row(LETTERS[i], (i===st.dest?"● ":"○ ")+x.naam, x.key.slice(0,8),
+          i===st.dest, null, function(){ st.dest=i; bewaar(); render(true); }));
+      });
+      body.appendChild(el("div","epd-rule"));
+      body.appendChild(row("N","Uit contacten toevoegen",null,false,"kaart",function(){ st.view="destpick"; render(true); }));
+      body.appendChild(row("O","Sleutel intypen",null,false,"doel",function(){ st.input=""; st.view="destkey"; render(true); }));
+      if(st.dests.length > 1)
+        body.appendChild(row("P","Gekozen verwijderen",null,false,null,function(){ verwijderDest(); }));
+      foot.appendChild(el("span",null,"A-H kiezen"));
+      foot.appendChild(el("span",null,"← terug"));
+
+    }else if(v === "destpick"){
+      head.appendChild(el("span",null,"Uit contacten"));
+      crumb.textContent = "Wie mag een bestemming worden?";
+      CONTACTS.forEach(function(c,i){
+        body.appendChild(row(LETTERS[i], c.name, c.key.slice(0,8), false, null, function(){
+          st.dests.push({naam:c.name.replace(/^BE-[A-Z]+-/,""), key:c.key, kind:c.kind, vast:false});
+          st.dest = st.dests.length-1; bewaar(); st.view="dest"; render(true);
+        }));
+      });
+      foot.appendChild(el("span",null,"A-G kiezen"));
+      foot.appendChild(el("span",null,"← terug"));
+
+    }else if(v === "destkey"){
+      head.appendChild(el("span",null,"Sleutel intypen"));
+      head.appendChild(el("span","step", st.input.length+"/64"));
+      crumb.textContent = "64 hextekens. Cijfers via alt, of gewoon je pc-toetsenbord.";
+      var hx = el("div","epd-hex");
+      hx.appendChild(document.createTextNode(st.input.replace(/(.{16})/g,"$1\n")));
+      hx.appendChild(el("span","caret"," "));
+      body.appendChild(hx);
+      body.appendChild(el("div","epd-rule"));
+      var geldig = st.input.length === 64;
+      var k4=el("div","epd-kv"); k4.appendChild(el("span","k","Status"));
+      k4.appendChild(el("span","v", geldig ? "geldig — Enter om te bewaren"
+        : (64-st.input.length)+" tekens te gaan")); body.appendChild(k4);
+      foot.appendChild(el("span",null,"alleen 0-9 a-f"));
+      foot.appendChild(el("span",null,"← wissen"));
+
+    }else if(v === "destnaam"){
+      head.appendChild(el("span",null,"Naam geven"));
+      crumb.textContent = st.pendingKey.slice(0,16) + "…";
+      var nb = el("div","epd-big");
+      nb.appendChild(document.createTextNode(st.input));
+      nb.appendChild(el("span","caret"," "));
+      body.appendChild(nb);
+      body.appendChild(el("div","epd-note","Kort houden — dit staat op het verzendscherm."));
+      foot.appendChild(el("span",null,"Enter = bewaren"));
+      foot.appendChild(el("span",null,st.input.length+"/16"));
+    }
+
+    scr.appendChild(head); scr.appendChild(crumb); scr.appendChild(body); scr.appendChild(foot);
+    if(flash){ scr.classList.remove("flash"); void scr.offsetWidth; scr.classList.add("flash"); }
+    paintSide();
+  }
+
+  function paintSide(){
+    var bezig = (st.app==="msg" && ["field","confirm","sending","sent"].indexOf(st.view)>=0);
+    var b = payload(), total = b.length+12;
+    document.getElementById("wire").textContent = bezig
+      ? hex(b)+"\n"+humanLine()+"\n→ "+dest().naam+" ("+dest().key.slice(0,16)+"…)"
+      : "— nog geen bericht samengesteld —";
+    document.getElementById("m-bytes").innerHTML = (bezig?b.length:0)+"<small> B</small>";
+    document.getElementById("m-pkt").innerHTML   = (bezig?total:0)+"<small> B</small>";
+    document.getElementById("m-air").innerHTML   = (bezig?airtime(total):0)+"<small> ms</small>";
+    document.getElementById("m-air-box").classList.toggle("warn", bezig && airtime(total)>700);
+    document.getElementById("devstate").textContent =
+      st.view==="apps" ? "gereed" : (st.app==="msg" ? CATALOG[st.type].code : (st.app||"").toUpperCase());
+    var rows = document.querySelectorAll("#cat-body tr");
+    for(var i=0;i<rows.length;i++) rows[i].classList.toggle("on", bezig && i===st.type);
+  }
+
+  /* ---------------------------------------------------- mesh-verloop */
+  function buildTrace(total, d){
+    var air = airtime(total);
+    var ev = [
+      { t:0, h:"TX · flood, 0 hops", d:"BE-HSS-BW-04 zendt "+total+" B, "+air+" ms in de lucht" },
+      { t:air, h:"dak hoort het", d:"BE-HSS-DinX-Home · RSSI -71 dBm · SNR 8,0 dB" },
+      { t:air+40, h:"bureau hoort het ook", d:"MeshUptime · RSSI -83 dBm · ontdubbeld in de fabric" },
+      { t:air+640, h:"openHop herhaalt via dak", d:"1 hop · "+air+" ms zendtijd · tx_mode bridge" },
+      { t:air+640+air, h:d.naam+" ontvangt",
+        d:(d.kind==="room" ? "Room server bewaart het bericht" : "Directe ontvanger")+" · "+d.key.slice(0,8) },
+      { t:air+640+air+520, k:"ack", h:"Bevestiging terug", d:"ACK over 2 hops · pad nu bekend" }
+    ];
+    return ev.map(function(e){ e.done=false; return e; });
+  }
+  function paintTrace(){
+    var ol = document.getElementById("trace");
+    ol.textContent = "";
+    document.getElementById("trace-hint").textContent = !st.trace.length
+      ? "Verstuur iets op het toestel; hier loopt het verloop mee."
+      : (LIVE.on ? "Echt verstuurd via openHop. Het verloop is een reconstructie — de tijden komen uit de schatting."
+                 : "Nagespeeld verloop, met de tijden uit de zendtijdschatting.");
+    st.trace.forEach(function(e){
+      var li = el("li", e.done ? (e.k==="ack" ? "done ack" : "done") : "pending");
+      li.appendChild(el("span","pip"));
+      li.appendChild(el("div","ev-t","+"+e.t+" ms"));
+      li.appendChild(el("div",null,e.h));
+      li.appendChild(el("div","ev-d",e.d));
+      ol.appendChild(li);
+    });
+  }
+  function playTrace(klaar){
+    timers.forEach(clearTimeout); timers=[];
+    st.trace.forEach(function(e,i){
+      timers.push(setTimeout(function(){
+        e.done = true; st.traceNow = e.h; paintTrace();
+        if(st.view==="sending") render(false);
+        if(i===st.trace.length-1 && klaar) klaar();
+      }, e.t + 120));
+    });
+  }
+
+  /* ---------------------------------------------------- verzenden */
+  function haalMesh(){
+    if(!LIVE.on) return;
+    fetch("/mesh").then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+      .then(function(j){
+        if(!j || !j.buren) return;
+        j.verkeer = (j.verkeer && j.verkeer.route_totals) || {};
+        j.contacten = (j.contacten||[]).length;
+        j.bevroren = false;
+        MESH = j;
+        if(st.view === "dek") render(false);
+      }).catch(function(){});
+  }
+  /* Vijf blokjes in plaats van een getal: op e-ink lees je een balk sneller
+     dan 0,83 -- en de score zegt toch al niets absoluuts. */
+  function balk(score){
+    var n = Math.max(0, Math.min(5, Math.round((score||0)*5)));
+    return new Array(n+1).join("\u2588") + new Array(6-n).join("\u2591");
+  }
+  function ouder(sec){
+    if(sec == null) return "?";
+    if(sec < 90) return sec + " s";
+    if(sec < 5400) return Math.round(sec/60) + " min";
+    return Math.round(sec/3600) + " u";
+  }
+
+  function liveSend(text, key){
+    return fetch("/send",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({pub_key:key,text:text,txt_type:0})}).then(function(r){ return r.json(); });
+  }
+  function doSend(tekst, d, totalBytes, naChat){
+    st.busy = true; st.lastText = tekst;
+    st.trace = buildTrace(totalBytes, d); st.traceNow = "zenden…";
+    st.view = "sending"; render(true); paintTrace();
+    var laatste = st.trace[st.trace.length-1];
+    function af(ok, route){
+      st.ok=ok; st.routeText=route; st.rtt=laatste.t; st.busy=false;
+      st.log.push({ time:new Date().toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit",second:"2-digit"}),
+        text:tekst, dest:d.naam, bytes:totalBytes, air:airtime(totalBytes), live:LIVE.on, ok:ok });
+      if(st.log.length>12) st.log.shift();
+      bewaar(); paintLog();
+      if(naChat) naChat(ok);
+      st.view="sent"; render(true);
+    }
+    if(LIVE.on){
+      liveSend(tekst, d.key).then(function(res){
+        var ok = !!(res && (res.sent || (res.data && res.data.sent)));
+        playTrace(function(){ af(ok, ok ? "flood → 1 hop · ACK" : "geen ACK"); });
+      }).catch(function(){ playTrace(function(){ af(false,"brug onbereikbaar"); }); });
+    }else{
+      playTrace(function(){ af(true,"flood → 1 hop · ACK"); });
+    }
+  }
+  function nu(){ return new Date().toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}); }
+
+  /* ---------------------------------------------------- navigatie */
+  function blader(richting){
+    var n = PAGINAS.length;
+    st.pagina = (st.pagina + richting + n) % n;
+    render(true);
+  }
+  function openApp(k){
+    st.app = k;
+    if(k==="msg") st.view="types";
+    else if(k==="rooms"){ st.view = st.rooms.length===1 ? null : "rooms";
+      if(!st.view){ openThread(st.rooms[0]); return; } }
+    else if(k==="dm") st.view="dmlist";
+    else if(k==="cont") st.view="cont";
+    else if(k==="dest") st.view="dest";
+    else if(k==="dek"){ st.view="dek"; haalMesh(); }
+    else if(k==="gps"){ st.info={titel:"GPS",sub:"MIA-M10Q · fix sinds 07:58",rijen:[
+      ["Fix","3D · 9 satellieten"],["Breedte","50.929431"],["Lengte","5.312173"],
+      ["Nauwkeurig","± 3,1 m"],["Hoogte","42 m"]]}; st.view="info"; }
+    else if(k==="accu"){ st.info={titel:"Accu",sub:"BQ27220 · 1400 mAh",rijen:[
+      ["Lading","87%"],["Spanning","4,02 V"],["Stroom","-64 mA"],["Nog","± 9 u"],
+      ["Laden","niet aangesloten"]]}; st.view="info"; }
+    else if(k==="inst"){ st.info={titel:"Instellingen",sub:"node en radio",rijen:[
+      ["Naam","BE-HSS-BW-04"],["Regio","EU868 · 869,525"],["SF / BW","11 / 250 kHz"],
+      ["Zendvermogen","22 dBm"],["Verzenden", LIVE.on ? "echt via openHop" : "gesimuleerd"]]}; st.view="info"; }
+    else if(k==="uit"){ st.info={titel:"Afsluiten",sub:"Niet in een simulator.",rijen:[
+      ["Stand","dit toestel bestaat alleen hier"],["Tip","\u2302 brengt je thuis"]]}; st.view="info"; }
+    else if(k==="log"){
+      var rj = st.log.length
+        ? st.log.slice().reverse().slice(0,8).map(function(x){ return [x.time, x.text.slice(0,28)]; })
+        : [["leeg","nog niets verzonden"]];
+      st.info={titel:"Logboek",sub:st.log.length+" verzonden vanaf dit toestel",rijen:rj}; st.view="info"; }
+    else if(k==="radio"){ st.info={titel:"Radio",sub:"SX1262 \u00B7 EU868",rijen:[
+      ["Frequentie","869,525 MHz"],["Bandbreedte","250 kHz"],["Spreiding","SF11"],
+      ["Codering","4/5"],["Vermogen","22 dBm"],["Ruisvloer","-118 dBm"]]}; st.view="info"; }
+    else if(k==="wifi"){ st.info={titel:"Wifi",sub:"alleen voor beheer, niet voor de mesh",rijen:[
+      ["Stand","uit"],["Reden","spaart 60 mA"],["Tip","aanzetten voor een firmware-update"]]}; st.view="info"; }
+    else if(k==="klok"){ st.info={titel:"Tijd",sub:"uit GPS, CET",rijen:[
+      ["Klok", new Date().toLocaleTimeString("nl-BE")],["Bron","GPS"],
+      ["Afwijking","< 1 s"]]}; st.view="info"; }
+    else if(k==="chip"){ st.info={titel:"Toestel",sub:"LilyGo T-Deck Pro",rijen:[
+      ["Processor","ESP32-S3FN16R8"],["Geheugen","16 MB flash \u00B7 8 MB PSRAM"],
+      ["Scherm","GDEQ031T10 \u00B7 240x320"],["Touch","CST328"],["Toetsen","TCA8418"],
+      ["Radio","SX1262"]]}; st.view="info"; }
+    else if(k==="test"){ st.info={titel:"Zendtest",sub:"wat een leeg pakket kost",rijen:[
+      ["Kortste bericht","14 B \u00B7 \u00B1"+airtime(14)+" ms"],
+      ["Volle catalogus","36 B \u00B7 \u00B1"+airtime(36)+" ms"],
+      ["Met vrije tekst","60 B \u00B7 \u00B1"+airtime(60)+" ms"],
+      ["Duty cycle","1% \u2192 \u00B1 6 ber./min"]]}; st.view="info"; }
+    else if(k==="over"){ st.info={titel:"Over",sub:"simulator, geen firmware",rijen:[
+      ["Bouw","T-Deck Ploegbericht"],["Scherm","240x320, ware grootte"],
+      ["Verzenden", LIVE.on ? "echt via openHop" : "gesimuleerd"],
+      ["Doel","de berichtflow ontwerpen v\u00F3\u00F3r het flashen"]]}; st.view="info"; }
+    else if(k==="alarm"){ st.view="alarm"; }
+    else if(k==="pos"){ st.view="pos"; }
+    render(true);
+  }
+  function openThread(c){
+    st.thread = c; st.app = c.kind==="room" ? "room" : "dm";
+    st.view = "thread"; render(true);
+    var b = scr.querySelector(".epd-body"); if(b) b.scrollTop = b.scrollHeight;
+  }
+  function choose(i){
+    if(st.busy) return;
+    if(st.view==="types"){
+      if(i>=CATALOG.length) return;
+      st.type=i; st.step=0; st.picks=[]; st.text=""; st.view="field"; render(true);
+    }else if(st.view==="field"){
+      var f = CATALOG[st.type].fields[st.step];
+      if(f.type==="text" || i>=f.opts.length) return;
+      st.picks[st.step]=i; advance();
+    }else if(st.view==="dmlist"){
+      var lijst = CONTACTS.filter(function(c){return c.kind!=="room";});
+      if(i<lijst.length) openThread(lijst[i]);
+    }else if(st.view==="dest"){
+      if(i < st.dests.length){ st.dest=i; bewaar(); render(true); }
+      else if(LETTERS[i]==="N"){}
+    }else if(st.view==="destpick"){
+      if(i<CONTACTS.length){
+        var c = CONTACTS[i];
+        st.dests.push({naam:c.name.replace(/^BE-[A-Z]+-/,""), key:c.key, kind:c.kind, vast:false});
+        st.dest = st.dests.length-1; bewaar(); st.view="dest"; render(true);
+      }
+    }else if(st.view==="rooms"){
+      if(i < st.rooms.length) openThread(st.rooms[i]);
+    }else if(st.view==="roompick"){
+      if(i<CONTACTS.length){
+        var rc = CONTACTS[i];
+        st.rooms.push({naam:rc.name.replace(/^BE-[A-Z]+-/,"").slice(0,14), key:rc.key, kind:"room"});
+        bewaar(); st.view="rooms"; render(true);
+      }
+    }else if(st.view==="apps"){
+      var pg = PAGINAS[st.pagina];
+      if(i<pg.length) openApp(pg[i].key);
+    }
+  }
+  function advance(){
+    var t = CATALOG[st.type];
+    if(st.step+1 < t.fields.length){ st.step++; st.view="field"; } else st.view="confirm";
+    render(true);
+  }
+  function verwijderDest(){
+    if(st.dests.length<2) return;
+    st.dests.splice(st.dest,1);
+    st.dest = Math.max(0, st.dest-1); bewaar(); render(true);
+  }
+  function back(){
+    if(st.busy) return;
+    var v = st.view;
+    if(v==="field"){ if(st.step===0) st.view="types"; else st.step--; }
+    else if(v==="confirm"){ st.view="field"; st.step=CATALOG[st.type].fields.length-1; }
+    else if(v==="types"||v==="dmlist"||v==="cont"||v==="dest"||v==="sent"||v==="rooms"||v==="info"||v==="dek"||v==="alarm"||v==="pos"){ st.view="apps"; st.app=null; }
+    else if(v==="destpick"||v==="destnaam"){ st.view="dest"; }
+    else if(v==="roompick"){ st.view="rooms"; }
+    else if(v==="destkey"){ st.view = st.roomKey ? "rooms" : "dest"; st.roomKey=false; }
+    else if(v==="thread"){ st.view = st.app==="dm" ? "dmlist" : (st.rooms.length>1 ? "rooms" : "apps"); }
+    else if(v==="compose"){ st.view="thread"; }
+    else return;
+    render(true);
+  }
+  function enter(){
+    if(st.busy) return;
+    var v = st.view;
+    if(v==="field"){
+      var f = CATALOG[st.type].fields[st.step];
+      if(f.type==="text"){ st.picks[st.step]=st.text; advance(); }
+      return;
+    }
+    if(v==="confirm"){
+      var b=payload(), total=b.length+12, d=dest();
+      doSend(humanLine(), d, total, function(ok){
+        var lijst = st.chat[d.key] || (st.chat[d.key]=[]);
+        lijst.push({who:"ik",mine:true,tm:nu(),body:humanLine()});
+        if(ok && d.kind==="room"){
+          setTimeout(function(){
+            lijst.push({who:"Dispatch",tm:nu(),body:"Begrepen, "+CATALOG[st.type].code+" genoteerd."});
+            if(st.view==="thread") render(false);
+          }, 2600);
+        }
+      });
+      return;
+    }
+    if(v==="pos"){
+      var dp = dest(), tp = "POS · 50.9294,5.3122 · ±3m";
+      doSend(tp, dp, tp.length+18, null);
+      return;
+    }
+    if(v==="alarm"){
+      var da = dest(), tekst = "MAYDAY \u00B7 BE-HSS-BW-04 \u00B7 50.9294,5.3122";
+      doSend(tekst, da, tekst.length+18, null);
+      return;
+    }
+    if(v==="apps"){ blader(1); return; }          /* Enter bladert, zoals gevraagd */
+    if(v==="sent"){
+      st.view = st.app==="msg" ? "types"
+              : (st.app==="alarm"||st.app==="pos") ? "apps" : "thread";
+      render(true); return;
+    }
+    if(v==="thread"){ st.input=""; st.view="compose"; render(true); return; }
+    if(v==="compose"){
+      if(!st.input.trim()) return;
+      var c = st.thread, tekst = st.input, totaal = tekst.length+18;
+      doSend(tekst, {naam:c.name, key:c.key, kind:c.kind}, totaal, function(){
+        var lijst = st.chat[c.key] || (st.chat[c.key]=[]);
+        lijst.push({who:"ik",mine:true,tm:nu(),body:tekst});
+      });
+      st.input=""; return;
+    }
+    if(v==="destkey"){
+      if(st.input.length!==64) return;
+      st.pendingKey = st.input.toLowerCase(); st.input=""; st.view="destnaam"; render(true); return;
+    }
+    if(v==="rooms"||v==="roompick"||v==="cont"||v==="info"){ return; }
+    if(v==="destnaam"){
+      var naam = st.input.trim() || ("Sleutel "+st.pendingKey.slice(0,4));
+      if(st.roomKey){
+        st.rooms.push({naam:naam, key:st.pendingKey, kind:"room"});
+        st.roomKey=false; st.input=""; bewaar(); st.view="rooms"; render(true); return;
+      }
+      st.dests.push({naam:naam, key:st.pendingKey, kind:"contact", vast:false});
+      st.dest = st.dests.length-1; st.input=""; bewaar(); st.view="dest"; render(true); return;
+    }
+  }
+  function typeChar(ch){
+    var v = st.view;
+    if(v==="field"){
+      var f = CATALOG[st.type].fields[st.step];
+      if(f.type!=="text" || st.text.length>=(f.max||24)) return;
+      st.text += ch; render(false); return;
+    }
+    if(v==="compose"){ if(st.input.length<120){ st.input+=ch; render(false); } return; }
+    if(v==="destkey"){
+      var c2 = ch.toLowerCase();
+      if("0123456789abcdef".indexOf(c2)<0 || st.input.length>=64) return;
+      st.input += c2; render(false); return;
+    }
+    if(v==="destnaam"){ if(st.input.length<16){ st.input+=ch; render(false); } return; }
+  }
+  function isTypeView(){
+    var v = st.view;
+    if(v==="compose"||v==="destkey"||v==="destnaam") return true;
+    return v==="field" && CATALOG[st.type].fields[st.step].type==="text";
+  }
+  function wis(){
+    if(st.view==="field" && st.text.length){ st.text=st.text.slice(0,-1); render(false); return true; }
+    if((st.view==="compose"||st.view==="destkey"||st.view==="destnaam") && st.input.length){
+      st.input=st.input.slice(0,-1); render(false); return true;
+    }
+    return false;
+  }
+
+  function handleKey(k){
+    if(k==="ALT"){ st.alt=!st.alt; tekenKb(); return; }
+    if(k==="LINKS" || k==="RECHTS"){
+      if(st.view==="apps") blader(k==="RECHTS" ? 1 : -1);
+      return;
+    }
+    if(k==="ENTER") return enter();
+    if(k==="ESC"){ if(!st.busy){ st.view="apps"; st.app=null; render(true);} return; }
+    if(k==="BACK"){ if(wis()) return; return back(); }
+    if(k===" "){ if(isTypeView()) return typeChar(" "); return; }
+    if(st.alt && ALTMAP[k]){ typeChar(ALTMAP[k]); st.alt=false; tekenKb(); return; }
+    if(isTypeView()) return typeChar(k.toLowerCase());
+    if(st.view==="dek" && k==="R"){ haalMesh(); render(true); return; }
+    var i = LETTERS.indexOf(k);
+    if(i>=0) return choose(i);
+    if(st.view==="dest"){
+      if(k==="N"){ st.view="destpick"; render(true); }
+      else if(k==="O"){ st.input=""; st.view="destkey"; render(true); }
+      else if(k==="P"){ verwijderDest(); }
+    }
+  }
+
+  /* ---------------------------------------------------- opbouw */
+  function tekenKb(){
+    var kb = document.getElementById("kb");
+    kb.textContent = "";
+    KB_ROWS.forEach(function(rij,ri){
+      var r = el("div","kb-row");
+      if(ri===2){ var al=el("button","key alt"+(st.alt?" on":""),"alt"); al.dataset.k="ALT"; al.type="button";
+                  al.setAttribute("aria-label","Alt-laag"); r.appendChild(al); }
+      rij.forEach(function(ch){
+        var b=el("button","key", st.alt && ALTMAP[ch] ? ALTMAP[ch] : ch);
+        b.dataset.k=ch; b.type="button";
+        if(!st.alt && ALTMAP[ch]) b.appendChild(el("i",null,ALTMAP[ch]));
+        r.appendChild(b);
+      });
+      if(ri===1){ var bk=el("button","key wide","⌫"); bk.dataset.k="BACK"; bk.type="button";
+                  bk.setAttribute("aria-label","Terug of wissen"); r.appendChild(bk); }
+      if(ri===2){ var en=el("button","key wide","↵"); en.dataset.k="ENTER"; en.type="button";
+                  en.setAttribute("aria-label","Bevestigen"); r.appendChild(en); }
+      kb.appendChild(r);
+    });
+    /* Onderste rij zoals op het toestel: twee kleine functietoetsen, de
+       spatiebalk, sym, en nog een kleine. De twee buitenste bestaan op de
+       hardware maar doen in deze app niets -- dat is eerlijker dan ze weglaten. */
+    var r4 = el("div","kb-row");
+    var f1 = el("button","key dood","◐"); f1.type="button"; f1.title="bestaat op het toestel, hier ongebruikt";
+    var hm = el("button","key","⌂"); hm.dataset.k="ESC"; hm.type="button"; hm.title="naar het startscherm";
+    var sp = el("button","key sp","␣"); sp.dataset.k=" "; sp.type="button";
+    var sy = el("button","key","sym"); sy.dataset.k="ALT"; sy.type="button"; sy.title="alt-laag";
+    var f2 = el("button","key dood","♪"); f2.type="button"; f2.title="bestaat op het toestel, hier ongebruikt";
+    r4.appendChild(f1); r4.appendChild(hm); r4.appendChild(sp); r4.appendChild(sy); r4.appendChild(f2);
+    kb.appendChild(r4);
+  }
+  document.getElementById("kb").addEventListener("click", function(ev){
+    var b = ev.target.closest("button.key");
+    if(b) handleKey(b.dataset.k);
+  });
+
+  function buildCatalog(){
+    var tb = document.getElementById("cat-body");
+    CATALOG.forEach(function(t){
+      var tr=el("tr"), td1=el("td");
+      td1.appendChild(el("span","tagmini",t.code));
+      td1.appendChild(document.createTextNode(t.label));
+      tr.appendChild(td1);
+      tr.appendChild(el("td",null,t.fields.map(function(f){return f.label;}).join(", ")));
+      tr.appendChild(el("td","n","≤ "+maxBytes(t)));
+      tb.appendChild(tr);
+    });
+  }
+  function paintLog(){
+    var ul = document.getElementById("log"); ul.textContent="";
+    if(!st.log.length){
+      var li=el("li"); li.style.borderLeftColor="var(--line)";
+      li.appendChild(el("span","empty","Nog niets verzonden — kies links een bericht."));
+      ul.appendChild(li); return;
+    }
+    st.log.slice().reverse().forEach(function(x){
+      var li = el("li", x.live ? "" : "simulated");
+      if(!x.ok) li.style.borderLeftColor="var(--accent)";
+      li.appendChild(el("div","t", x.time+"  ·  → "+x.dest+"  ·  "+x.bytes+" B  ·  ±"+x.air+" ms  ·  "+(x.live?"echt":"gesimuleerd")));
+      li.appendChild(el("div",null,x.text));
+      ul.appendChild(li);
+    });
+  }
+
+  document.addEventListener("keydown", function(ev){
+    if(ev.metaKey||ev.ctrlKey) return;
+    if(paneelOpen()){
+      /* Zolang de overlay open is, hoort Escape hem te sluiten en mag de rest
+         niet doorlekken naar het toestel eronder. */
+      if(ev.key==="Escape"){ ev.preventDefault(); paneel(false); }
+      return;
+    }
+    var k=null;
+    if(ev.key==="Enter") k="ENTER";
+    else if(ev.key==="Backspace") k="BACK";
+    else if(ev.key==="Escape") k="ESC";
+    else if(ev.key==="ArrowLeft") k="LINKS";
+    else if(ev.key==="ArrowRight") k="RECHTS";
+    else if(ev.key===" ") k=" ";
+    else if(/^[a-zA-Z]$/.test(ev.key)) k=ev.key.toUpperCase();
+    else if(/^[0-9]$/.test(ev.key) && isTypeView()){ ev.preventDefault(); return typeChar(ev.key); }
+    if(!k) return;
+    ev.preventDefault(); handleKey(k);
+    var btn = document.querySelector('button.key[data-k="'+(k===" "?" ":k)+'"]');
+    if(btn){ btn.classList.add("hit"); setTimeout(function(){btn.classList.remove("hit");},110); }
+  });
+
+  function probeBridge(){
+    var chip=document.getElementById("mode-chip"), note=document.getElementById("note-mode");
+    var chipM = document.getElementById("mode-chip-m");
+    function zet(tekst, klasse){
+      chip.textContent = tekst; chip.className = "chip " + klasse;
+      if(chipM){ chipM.textContent = tekst; chipM.className = "chip " + klasse; }
+    }
+    function sim(reden){
+      LIVE.on=false; zet("gesimuleerd","sim");
+      note.innerHTML = "Deze pagina draait <strong>gesimuleerd</strong>: "+reden+
+        " Hetzelfde bestand draait op je eigen netwerk naast een brug die <code>/send</code> doorgeeft aan "+
+        "<code>/api/companion/send_text</code>; daar gaan de berichten er écht uit en blijft het wachtwoord serverkant.";
+    }
+    if(!("fetch" in window)) return sim("deze browser kan geen verzoeken doen.");
+    var kap = setTimeout(function(){ sim("er is geen verzendbrug op deze herkomst."); }, 1500);
+    fetch("/bridge").then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+      .then(function(j){
+        clearTimeout(kap);
+        if(j && j.bridge && j.zenden !== "echt"){
+          /* Er is een brug, maar hij zendt niet echt. Dat moet hier staan:
+             een label dat "echt verzenden" belooft terwijl er niets de lucht
+             in gaat, is erger dan geen label. */
+          LIVE.on=true; zet("proefstand","sim");
+          note.innerHTML = "De <strong>openHop-brug</strong> is verbonden en de dekking hieronder is " +
+            "echt, maar verzenden staat in <strong>proefstand</strong>: je bericht wordt wel opgebouwd " +
+            "en gelogd, en gaat niet de lucht in. Zo kost testen geen zendtijd op een gedeelde band.";
+          render(false);
+        }else if(j && j.bridge){
+          LIVE.on=true; zet("echt verzenden","live");
+          note.innerHTML = "Deze pagina hangt aan de <strong>openHop-brug</strong>: wat je hier verstuurt gaat "+
+            "werkelijk de mesh in via <code>/api/companion/send_text</code>. Het verloop hieronder blijft een "+
+            "reconstructie — de tijden komen uit de schatting, niet uit gemeten ontvangst.";
+          render(false);
+        }else sim("de brug antwoordde, maar meldt zich niet klaar.");
+      }).catch(function(){ clearTimeout(kap); sim("er is geen verzendbrug op deze herkomst."); });
+  }
+
+  /* Het scherm moet in twee richtingen passen: breedte voor het paneel,
+     en wat er overblijft in de hoogte nadat het toetsenbord zijn deel heeft.
+     Daarom rekenen in plaats van vaste stappen per breekpunt. */
+  function schaal(){
+    var wortel = document.documentElement;
+    if(!window.matchMedia("(max-width:900px)").matches){
+      wortel.style.removeProperty("--s");
+      return;
+    }
+    var balk = document.querySelector(".mobielbalk");
+    var kb = document.getElementById("kb");
+    var kbH = kb ? kb.offsetHeight : 140;
+    var over = (window.innerHeight || 640) - (balk ? balk.offsetHeight : 44) - kbH - 52;
+    var sB = (window.innerWidth - 30) / 240;
+    var sH = over / 320;
+    var s = Math.min(sB, sH, 2);
+    if(!isFinite(s) || s < 0.7) s = 0.7;
+    wortel.style.setProperty("--s", s.toFixed(3));
+  }
+
+  function paneel(open){
+    document.body.classList.toggle("paneel-open", open);
+    var knop = document.getElementById("menu");
+    if(knop) knop.setAttribute("aria-expanded", open ? "true" : "false");
+    if(open){ var st2 = document.getElementById("stack"); if(st2) st2.scrollTop = 0; }
+  }
+  function paneelOpen(){ return document.body.classList.contains("paneel-open"); }
+
+  function start(){
+    buildCatalog(); tekenKb(); paintLog(); paintTrace(); render(false); probeBridge();
+    schaal();
+    window.addEventListener("resize", schaal);
+    window.addEventListener("orientationchange", function(){ setTimeout(schaal, 120); });
+    var mn = document.getElementById("menu");
+    if(mn) mn.addEventListener("click", function(){ paneel(!paneelOpen()); });
+    var sl = document.getElementById("sluit");
+    if(sl) sl.addEventListener("click", function(){ paneel(false); });
+  }
+
+  if(window.claude && window.claude.hot){
+    window.claude.hot.snapshot(function(){ return {log:st.log, dests:st.dests, dest:st.dest}; });
+    window.claude.hot.ready(function(d){
+      if(d){ if(d.log) st.log=d.log; if(d.dests&&d.dests.length) st.dests=d.dests; if(typeof d.dest==="number") st.dest=d.dest; }
+      start();
+    });
+  }else start();
+})();
+</script>

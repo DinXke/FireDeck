@@ -1,0 +1,15 @@
+[Unit]
+Description=FireDeck - T-Deck Pro simulator met brug naar openHop
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/firedeck
+EnvironmentFile=/etc/firedeck.env
+ExecStart=/usr/bin/python3 /opt/firedeck/firedeck.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
