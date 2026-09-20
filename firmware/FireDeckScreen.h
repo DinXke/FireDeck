@@ -27,6 +27,7 @@ class UITask;
 class MyMesh;
 extern MyMesh the_mesh;
 
+#include <target.h>          // voor sensors.node_lat / node_lon bij $loc
 #include "FireDeckTemplate.h"
 
 /* De meldingslijst komt van het bestandssysteem; zie FireDeckTemplate.h.
@@ -111,6 +112,17 @@ class FireDeckScreen : public UIScreen {
         lengte = 5;
         NodePrefs* p = the_mesh.getNodePrefs();
         if (p) snprintf(waarde, sizeof(waarde), "%s", p->node_name);
+      } else if (strncmp(tekst, "$loc", 4) == 0) {
+        lengte = 4;
+        /* Geen fix? Dan schrijven we dat op, en niet "0.00000,0.00000" --
+         * nulcoordinaten zien eruit als een positie en sturen iemand naar de
+         * Golf van Guinee. */
+        if (sensors.node_lat == 0 && sensors.node_lon == 0) {
+          snprintf(waarde, sizeof(waarde), "geen fix");
+        } else {
+          snprintf(waarde, sizeof(waarde), "%.5f,%.5f",
+                   sensors.node_lat, sensors.node_lon);
+        }
       } else if (strncmp(tekst, "$id", 3) == 0) {
         lengte = 3;
         uint8_t* pk = the_mesh.self_id.pub_key;
