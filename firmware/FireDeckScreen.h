@@ -238,6 +238,20 @@ public:
   }
 
   void setBestemming(int contact_idx) { _bestemming = contact_idx; }
+
+  /* Een vrije tekst naar de ontvangers van een meldingstype. Alarm en positie
+   * gebruiken dit, zodat een korps op EEN plaats instelt waar een noodoproep
+   * heen moet in plaats van op drie. */
+  uint8_t stuurTekst(const char* tekst, uint8_t type_idx, uint8_t* gemist_uit) {
+    uint8_t bewaar_type = _type;
+    _type = (type_idx < fd_template.aantal()) ? type_idx : 0;
+    StrHelper::strncpy(_regel, tekst ? tekst : "", sizeof(_regel));
+    _open = 0xFF;
+    uint8_t weg = stuurNaarOntvangers();
+    if (gemist_uit) *gemist_uit = _gemist;
+    _type = bewaar_type;
+    return weg;
+  }
   void opnieuw() { _stap = STAP_TYPES; _veld = 0; memset(_keuze, 0, sizeof(_keuze)); }
   /* Meteen bij een meldingstype beginnen, voor een tegel die daar
    * rechtstreeks heen springt. */
